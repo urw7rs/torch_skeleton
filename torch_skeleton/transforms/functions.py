@@ -230,13 +230,10 @@ def split_frames(x):
 def sub_center_joint(x, joint_id, all=False):
     mask = get_mask(x)
 
-    try:
-        if all:
-            x -= x[:, :, joint_id : joint_id + 1] * mask
-        else:
-            x -= x[0, 0:1, joint_id : joint_id + 1] * mask
-    except:
-        breakpoint()
+    if all:
+        x -= x[:, :, joint_id : joint_id + 1] * mask
+    else:
+        x -= x[0, 0:1, joint_id : joint_id + 1] * mask
 
     return x
 
