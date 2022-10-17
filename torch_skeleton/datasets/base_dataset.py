@@ -67,7 +67,7 @@ class SkeletonDataset(Dataset):
                     p.imap_unordered(self._parse, self.raw_file_paths)
                 )
         else:
-            self.parsed_file_paths = list(map(self.parse, self.raw_file_paths))
+            self.parsed_file_paths = list(map(self._parse, self.raw_file_paths))
 
     def download(self, path):
         return path

@@ -94,3 +94,8 @@ class RandomRotate:
 
     def __call__(self, x):
         return functions.random_rotate(x, self.degrees)
+
+
+class Denoise:
+    def __call__(self, x):
+        return functions.get_raw_denoised_data(x)
