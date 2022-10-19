@@ -1,7 +1,6 @@
 import os
 import os.path as osp
 import multiprocessing as mp
-import resource
 
 import numpy as np
 
@@ -48,9 +47,6 @@ class SkeletonDataset(Dataset):
         for path in self.download_paths:
             if not osp.exists(path):
                 self.download(path)
-
-        rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
-        resource.setrlimit(resource.RLIMIT_NOFILE, (100000, rlimit[1]))
 
         if num_workers == 0:
             use_multiprocessing = False
