@@ -1,14 +1,11 @@
 import pytest
 
 import time
-import multiprocessing as mp
 
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 
 from torch_skeleton import datasets
 import torch_skeleton.transforms as T
-
-import torchvision.transforms as TF
 
 
 @pytest.mark.parametrize("num_classes", [60, 120])
@@ -21,7 +18,7 @@ def test_ntu_torch(root, num_classes, eval_type, split, num_workers):
         split=split,
         root=root,
         num_workers=num_workers,
-        transform=TF.Compose(
+        transform=T.Compose(
             [
                 T.Denoise(),
                 T.SubJoint(joint_id=1, all=False),
@@ -36,11 +33,8 @@ def test_ntu_torch(root, num_classes, eval_type, split, num_workers):
     x, y = dataset[0]
     print(f"x size: {x.shape} y size: {y} {len(dataset)}")
 
-    dataloader = DataLoader(dataset, batch_size=64, shuffle=True, num_workers=0)
+    dataloader = DataLoader(
+        dataset, batch_size=64, shuffle=True, num_workers=num_workers
+    )
 
-    t0 = time.time()
-    for x, y in dataloader:
-        pass
-    t = time.time() - t0
-
-    print(t)
+    x, y = next(iter(dataloader))
