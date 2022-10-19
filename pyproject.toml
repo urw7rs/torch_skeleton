@@ -23,8 +23,6 @@ classifiers = [
 dependencies = [
     "numpy",
     "torch",
-    "torchvision",
-    "pytorch_lightning",
     "einops",
     "scipy",
     "gdown",
@@ -39,6 +37,7 @@ include = ["torch_skeleton", "torch_skeleton.*"]
 
 [project.optional-dependencies]
 dev = ["black", "pip-tools", "pytest", "pytest-cov", "flake8"]
+examples = ["pytorch_lightning", "fvcore"]
 
 [tool.black]
 line-length = 88
