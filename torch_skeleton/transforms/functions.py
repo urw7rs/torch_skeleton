@@ -6,11 +6,8 @@ import einops
 
 
 def get_mask(x):
-    try:
-        zeros = np.zeros_like(x)
-        zeros[x.sum(axis=(2, 3)) != 0] = 1
-    except:
-        breakpoint()
+    zeros = np.zeros_like(x)
+    zeros[x.sum(axis=(2, 3)) != 0] = 1
     return zeros
 
 
@@ -490,5 +487,7 @@ def get_raw_denoised_data(x):
         x = get_one_actor_points(x)
     else:  # more than 1 actor, select two main actors
         x = get_two_actors_points(x)
+
+        x = unpad_frames(x)
 
     return x
