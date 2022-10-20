@@ -96,6 +96,7 @@ class NTUDataModule(LightningDataModule):
         return DataLoader(
             self.train_set,
             batch_size=self.batch_size,
+            shuffle=True,
             num_workers=self.num_workers,
             pin_memory=True,
             drop_last=True,
