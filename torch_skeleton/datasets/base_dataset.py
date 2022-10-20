@@ -1,3 +1,4 @@
+from collections.abc import Callable
 import os
 import os.path as osp
 import multiprocessing as mp
@@ -40,10 +41,22 @@ class SkeletonDataset(Dataset):
         os.makedirs(parsed_dir, exist_ok=True)
         return parsed_dir
 
-    def __init__(self, root: Optional[str] = None, num_workers: Optional[int] = None):
+    @property
+    def preprocessed_dir(self):
+        preprocessed_dir = osp.join(self.root_dir, "preprocessed")
+        os.makedirs(preprocessed_dir, exist_ok=True)
+        return preprocessed_dir
+
+    def __init__(
+        self,
+        root: Optional[str] = None,
+        preprocess: Optional[Callable] = None,
+        num_workers: Optional[int] = None,
+    ):
         super().__init__()
 
         self.root = "./" if root is None else root
+        self.preprocess = preprocess
 
         for path in self.download_paths:
             if not osp.exists(path):
@@ -66,8 +79,22 @@ class SkeletonDataset(Dataset):
                 self.parsed_file_paths = list(
                     p.imap_unordered(self._parse, self.raw_file_paths)
                 )
+                if self.preprocess is None:
+                    self.load_file_paths = self.parsed_file_paths
+                else:
+                    self.load_file_paths = list(
+                        p.imap_unordered(
+                            self._preprocess, self.parsed_file_paths, chunksize=512
+                        )
+                    )
         else:
             self.parsed_file_paths = list(map(self._parse, self.raw_file_paths))
+            if self.preprocess is None:
+                self.load_file_paths = self.parsed_file_paths
+            else:
+                self.load_file_paths = list(
+                    map(self._preprocess, self.parsed_file_paths)
+                )
 
     def download(self, path):
         return path
@@ -80,6 +107,7 @@ class SkeletonDataset(Dataset):
             return parsed_path
 
         x = self.parse(path)
+
         with open(parsed_path, "wb") as f:
             np.save(f, x)
 
@@ -87,6 +115,20 @@ class SkeletonDataset(Dataset):
 
     def parse(self, path):
         return path
+
+    def _preprocess(self, path):
+        with open(path, "rb") as f:
+            x = np.load(f)
+
+        x = self.preprocess(x)
+
+        file_name = osp.basename(path)
+        preprocessed_path = osp.join(self.preprocessed_dir, file_name)
+
+        with open(preprocessed_path, "wb") as f:
+            np.save(f, x)
+
+        return preprocessed_path
 
     def __getitem__(self, index):
         raise NotImplementedError
