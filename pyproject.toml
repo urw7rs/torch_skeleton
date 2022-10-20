@@ -37,7 +37,14 @@ include = ["torch_skeleton", "torch_skeleton.*"]
 
 [project.optional-dependencies]
 dev = ["black", "pip-tools", "pytest", "pytest-cov", "flake8"]
-examples = ["pytorch_lightning", "fvcore"]
+examples = [
+    "pytorch_lightning",
+    "fvcore",
+    "wandb",
+    "rich",
+    "torch-geometric",
+    "jsonargparse[signatures]>=4.12.0",
+]
 
 [tool.black]
 line-length = 88
