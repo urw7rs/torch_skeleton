@@ -75,22 +75,26 @@ class SkeletonDataset(Dataset):
                 self.parsed_file_paths = list(
                     p.imap_unordered(self._parse, self.raw_file_paths)
                 )
+
                 if self.preprocess is None:
-                    self.load_file_paths = self.parsed_file_paths
+                    self.final_file_paths = self.parsed_file_paths
                 else:
-                    self.load_file_paths = list(
+                    self.final_file_paths = list(
                         p.imap_unordered(
                             self._preprocess, self.parsed_file_paths, chunksize=512
                         )
                     )
         else:
             self.parsed_file_paths = list(map(self._parse, self.raw_file_paths))
+
             if self.preprocess is None:
-                self.load_file_paths = self.parsed_file_paths
+                self.final_file_paths = self.parsed_file_paths
             else:
-                self.load_file_paths = list(
+                self.final_file_paths = list(
                     map(self._preprocess, self.parsed_file_paths)
                 )
+
+        self.final_file_paths = sorted(self.final_file_paths)
 
     def download(self, path):
         return path
@@ -126,8 +130,18 @@ class SkeletonDataset(Dataset):
 
         return preprocessed_path
 
-    def __getitem__(self, index):
+    def get(self, path, x):
         raise NotImplementedError
 
+    def __getitem__(self, idx):
+        path = self.final_file_paths[idx]
+
+        with open(path, "rb") as f:
+            x = np.load(f)
+
+        x, y = self.get(path, x)
+
+        return x, y
+
     def __len__(self):
-        return len(self.parsed_file_paths)
+        return len(self.final_file_paths)

@@ -3,8 +3,6 @@ import os.path as osp
 import gdown
 import urllib.request
 
-import numpy as np
-
 from typing import Optional, Callable
 
 import zipfile
@@ -46,11 +44,14 @@ class NTUDataset(SkeletonDataset):
         for path in self.download_paths:
             if path.split(".")[-1] == "txt":
                 with open(path) as f:
+                    # skip three lines
                     missing_files = f.read().splitlines()[3:]
 
-        paths = filter_missing(paths, missing_files)
+                paths = filter_missing(paths, missing_files)
+
         paths = filter_num_classes(paths, self.num_classes)
         paths = filter_split(paths, self.eval_type, self.split)
+
         return paths
 
     def __init__(
@@ -118,21 +119,13 @@ class NTUDataset(SkeletonDataset):
             x = ntu.as_numpy(skeleton_sequence)
         return x
 
-    def __getitem__(self, idx):
-        path = self.load_file_paths[idx]
-
-        with open(path, "rb") as f:
-            x = np.load(f)
-
+    def get(self, path, x):
         y = utils.label_from_name(osp.basename(path))
 
         x = self.transform(x)
         y = self.target_transform(y)
 
         return x, y
-
-    def __len__(self):
-        return len(self.parsed_file_paths)
 
 
 def filter_num_classes(paths, num_classes):
