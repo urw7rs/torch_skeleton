@@ -9,7 +9,9 @@ from typing import Optional, Callable
 
 import zipfile
 
-from torch_skeleton import ntu
+from . import ntu
+from . import utils
+
 from torch_skeleton.datasets.base_dataset import SkeletonDataset
 from torch_skeleton.utils import listdir
 
@@ -57,7 +59,6 @@ class NTUDataset(SkeletonDataset):
         eval_type,
         split,
         root: Optional[str] = None,
-        pre_transform: Optional[Callable] = None,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
         num_workers: int = 0,
@@ -122,7 +123,7 @@ class NTUDataset(SkeletonDataset):
         with open(path, "rb") as f:
             x = np.load(f)
 
-        y = ntu.label_from_name(osp.basename(path))
+        y = utils.label_from_name(osp.basename(path))
 
         x = self.transform(x)
         y = self.target_transform(y)
@@ -137,7 +138,7 @@ def filter_num_classes(paths, num_classes):
     ntu60_paths = []
     ntu120_paths = []
     for path in paths:
-        setup = ntu.setup_from_name(osp.basename(path))
+        setup = utils.setup_from_name(osp.basename(path))
 
         if setup > 17:
             ntu120_paths.append(path)
@@ -155,8 +156,8 @@ def filter_num_classes(paths, num_classes):
 def filter_split(paths, eval_type, split):
     split_is_train = split == "train"
 
-    get_eval = getattr(ntu, f"{eval_type}_from_name")
-    train_evals = getattr(ntu, f"ntu_train_{eval_type}s")()
+    get_eval = getattr(utils, f"{eval_type}_from_name")
+    train_evals = getattr(utils, f"ntu_train_{eval_type}s")()
 
     split_paths = []
     for path in paths:

@@ -1,7 +1,6 @@
 import os
 import os.path as osp
 import multiprocessing as mp
-import resource
 
 import numpy as np
 
@@ -49,9 +48,6 @@ class SkeletonDataset(Dataset):
             if not osp.exists(path):
                 self.download(path)
 
-        rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
-        resource.setrlimit(resource.RLIMIT_NOFILE, (100000, rlimit[1]))
-
         if num_workers == 0:
             use_multiprocessing = False
         elif num_workers is None:
@@ -67,7 +63,7 @@ class SkeletonDataset(Dataset):
                     p.imap_unordered(self._parse, self.raw_file_paths)
                 )
         else:
-            self.parsed_file_paths = list(map(self.parse, self.raw_file_paths))
+            self.parsed_file_paths = list(map(self._parse, self.raw_file_paths))
 
     def download(self, path):
         return path

@@ -1,3 +1,5 @@
+import os.path as osp
+
 import numpy as np
 
 import einops
@@ -9,8 +11,8 @@ def get_mask(x):
     return zeros
 
 
-def get_indices(x):
-    indices = np.where(x.sum(axis=(2, 3)) != 0)
+def get_indices(x, axis=(2, 3)):
+    indices = np.where(x.sum(axis=axis) != 0)
     return indices
 
 
@@ -230,13 +232,10 @@ def split_frames(x):
 def sub_center_joint(x, joint_id, all=False):
     mask = get_mask(x)
 
-    try:
-        if all:
-            x -= x[:, :, joint_id : joint_id + 1] * mask
-        else:
-            x -= x[0, 0:1, joint_id : joint_id + 1] * mask
-    except:
-        breakpoint()
+    if all:
+        x -= x[:, :, joint_id : joint_id + 1] * mask
+    else:
+        x -= x[0, 0:1, joint_id : joint_id + 1] * mask
 
     return x
 
@@ -295,4 +294,200 @@ def random_rotate(x, theta):
     indices = get_indices(x)
     joints = x[indices]
     x[indices] = np.einsum("ij,bvj->bvi", R, joints)
+    return x
+
+
+missing_count = 0
+noise_len_thres = 11
+noise_spr_thres1 = 0.8
+noise_spr_thres2 = 0.69754
+noise_mot_thres_lo = 0.089925
+noise_mot_thres_hi = 2
+
+
+def denoising_by_length(x):
+    """
+    Denoising data based on the frame length for each bodyID.
+    Filter out the bodyID which length is less or equal than the predefined threshold.
+    """
+    filtered_bodies = []
+    for body in np.split(x, indices_or_sections=x.shape[0], axis=0):
+        _, indices = get_indices(body)
+        length = indices.max() - indices.min() + 1
+        if length > noise_len_thres:
+            filtered_bodies.append(body)
+
+    x = np.concatenate(filtered_bodies, axis=0)
+    return x
+
+
+def get_valid_frames_by_spread(points):
+    """
+    Find the valid (or reasonable) frames (index) based on the spread of X and Y.
+    :param points: joints or colors
+    """
+    num_frames = points.shape[0]
+    valid_frames = []
+    for i in range(num_frames):
+        x = points[i, :, 0]
+        y = points[i, :, 1]
+        if (x.max() - x.min()) <= noise_spr_thres1 * (y.max() - y.min()):  # 0.8
+            valid_frames.append(i)
+    return np.array(valid_frames)
+
+
+def denoising_by_spread(x):
+    """
+    Denoising data based on the spread of Y value and X value.
+    Filter out the bodyID which the ratio of noisy frames is higher than the predefined
+    threshold.
+    bodies_data: contains at least 2 bodyIDs
+    """
+    denoised_bodies = []
+    for body in np.split(x, indices_or_sections=x.shape[0], axis=0):
+        valid_indices = get_valid_frames_by_spread(body[0])
+        _, indices = get_indices(body)
+        num_frames = indices.shape[0]
+        num_noise = num_frames - valid_indices.shape[0]
+        if num_noise == 0:
+            denoised_bodies.append(body)
+            continue
+
+        ratio = num_noise / float(num_frames)
+        if ratio < noise_spr_thres2:  # 0.69754
+            denoised_bodies.append(body)
+            # TODO: Consider removing noisy frames for each bodyID
+
+    x = np.concatenate(denoised_bodies, axis=0)
+    return x
+
+
+def denoising_by_motion(x):
+    """
+    Filter out the bodyID which motion is out of the range of predefined interval
+    """
+    denoised_bodies = [x[0:1]]
+    for body in np.split(x[1:], indices_or_sections=x.shape[0] - 1, axis=0):
+        motion = np.sum(np.var(body.reshape(-1, 3), axis=0))
+
+        valid_indices = get_valid_frames_by_spread(body[0])
+        valid_body = body[:, valid_indices]
+        denoised_motion = np.sum(np.var(valid_body.reshape(-1, 3), axis=0))
+
+        motion = min(motion, denoised_motion)
+        if (motion < noise_mot_thres_lo) or (motion > noise_mot_thres_hi):
+            pass
+        else:
+            denoised_bodies.append(body)
+
+    x = np.concatenate(denoised_bodies, axis=0)
+    return x
+
+
+def denoising_bodies_data(x):
+    """
+    Denoising data based on some heuristic methods, not necessarily correct for all samples.
+    Return:
+      denoised_bodies_data (list): tuple: (bodyID, body_data).
+    """
+
+    # Step 1: Denoising based on frame length.
+    x = denoising_by_length(x)
+
+    if x.shape[0] == 1:  # only has one bodyID left after step 1
+        return x
+
+    # Step 2: Denoising based on spread.
+    x = denoising_by_spread(x)
+
+    if x.shape[0] == 1:
+        return x
+
+    x = denoising_by_motion(x)
+    return x
+
+
+def get_one_actor_points(x):
+    return x[0:1]
+
+
+def intersect_indices(actor1, actor2):
+    _, t_indices1 = get_indices(actor1)
+    _, t_indices2 = get_indices(actor2)
+
+    return np.intersect1d(t_indices1, t_indices2)
+
+
+def get_two_actors_points(x):
+    """
+    Get the first and second actor's joints positions and colors locations.
+    # Arguments:
+        bodies_data (dict): 3 key-value pairs: 'name', 'data', 'num_frames'.
+        bodies_data['data'] is also a dict, while the key is bodyID, the value is
+        the corresponding body_data which is also a dict with 4 keys:
+          - joints: raw 3D joints positions. Shape: (num_frames x 25, 3)
+          - colors: raw 2D color locations. Shape: (num_frames, 25, 2)
+          - interval: a list which records the frame indices.
+          - motion: motion amount
+    # Return:
+        joints, colors.
+    """
+    x = denoising_bodies_data(x)  # Denoising data
+
+    num_bodies = x.shape[0]
+
+    if num_bodies > 1:  # Only left one actor after denoising
+        main_actor = x[0:1]
+        second_actor = np.zeros_like(main_actor)
+
+        actors = np.split(x[1:], indices_or_sections=num_bodies - 1, axis=0)
+
+        for actor in actors:
+            _, t_indices1 = get_indices(main_actor)
+            _, t_indices2 = get_indices(actor)
+
+            intersect = np.intersect1d(t_indices1, t_indices2)
+
+            if len(intersect) == 0:  # no overlap with actor1
+                main_actor[:, t_indices2] = actor[:, t_indices2]
+            else:
+                _, t_indices1 = get_indices(second_actor)
+                _, t_indices2 = get_indices(actor)
+
+                intersect = np.intersect1d(t_indices1, t_indices2)
+                if len(intersect) == 0:
+                    second_actor[:, t_indices2] = actor[:, t_indices2]
+
+        x = np.concatenate([main_actor, second_actor], axis=0)
+
+    return x
+
+
+def get_raw_denoised_data(x):
+    """
+    Get denoised data (joints positions and color locations) from raw skeleton sequences.
+    For each frame of a skeleton sequence, an actor's 3D positions of 25 joints represented
+    by an 2D array (shape: 25 x 3) is reshaped into a 75-dim vector by concatenating each
+    3-dim (x, y, z) coordinates along the row dimension in joint order. Each frame contains
+    two actor's joints positions constituting a 150-dim vector. If there is only one actor,
+    then the last 75 values are filled with zeros. Otherwise, select the main actor and the
+    second actor based on the motion amount. Each 150-dim vector as a row vector is put into
+    a 2D numpy array where the number of rows equals the number of valid frames. All such
+    2D arrays are put into a list and finally the list is serialized into a cPickle file.
+    For the skeleton sequence which contains two or more actors (mostly corresponds to the
+    last 11 classes), the filename and actors' information are recorded into log files.
+    For better understanding, also generate RGB+skeleton videos for visualization.
+    """
+
+    num_bodies, num_frames, num_joints, _ = x.shape
+
+    x = select_k_bodies(x, k=x.shape[0])
+
+    if num_bodies == 1:  # only 1 actor
+        x = get_one_actor_points(x)
+    else:  # more than 1 actor, select two main actors
+        x = get_two_actors_points(x)
+
+        x = unpad_frames(x)
+
     return x

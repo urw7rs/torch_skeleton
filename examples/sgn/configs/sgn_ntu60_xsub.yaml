@@ -1,0 +1,145 @@
+# pytorch_lightning==1.7.6
+seed_everything: 1484264750
+trainer:
+  logger:
+  - class_path: pytorch_lightning.loggers.WandbLogger
+    init_args:
+      name: SGN
+      save_dir: .
+      offline: false
+      id: null
+      anonymous: null
+      version: null
+      project: skeleton-action-recognition
+      log_model: false
+      experiment: null
+      prefix: ''
+      agg_key_funcs: null
+      agg_default_func: null
+      job_type: null
+      dir: .
+      config: null
+      entity: null
+      reinit: null
+      tags: null
+      group: null
+      notes: null
+      magic: null
+      config_exclude_keys: null
+      config_include_keys: null
+      mode: null
+      allow_val_change: null
+      resume: null
+      force: null
+      tensorboard: null
+      sync_tensorboard: null
+      monitor_gym: null
+      save_code: null
+      settings: null
+  enable_checkpointing: true
+  callbacks:
+  - class_path: pytorch_lightning.callbacks.ModelCheckpoint
+    init_args:
+      dirpath: null
+      filename: '{epoch}-{val_acc:.6f}'
+      monitor: val_acc
+      verbose: false
+      save_last: true
+      save_top_k: 3
+      save_weights_only: false
+      mode: max
+      auto_insert_metric_name: true
+      every_n_train_steps: null
+      train_time_interval: null
+      every_n_epochs: null
+      save_on_train_epoch_end: null
+  - class_path: pytorch_lightning.callbacks.LearningRateMonitor
+    init_args:
+      logging_interval: step
+      log_momentum: false
+  - class_path: pytorch_lightning.callbacks.RichModelSummary
+    init_args:
+      max_depth: 1
+  - class_path: pytorch_lightning.callbacks.RichProgressBar
+    init_args:
+      refresh_rate: 1
+      leave: false
+      theme:
+        description: white
+        progress_bar: '#6206E0'
+        progress_bar_finished: '#6206E0'
+        progress_bar_pulse: '#6206E0'
+        batch_progress: white
+        time: grey54
+        processing_speed: grey70
+        metrics: white
+      console_kwargs: null
+  default_root_dir: null
+  gradient_clip_val: null
+  gradient_clip_algorithm: null
+  num_nodes: 1
+  num_processes: null
+  devices: 1
+  gpus: null
+  auto_select_gpus: false
+  tpu_cores: null
+  ipus: null
+  enable_progress_bar: true
+  overfit_batches: 0.0
+  track_grad_norm: -1
+  check_val_every_n_epoch: 1
+  fast_dev_run: false
+  accumulate_grad_batches: null
+  max_epochs: 120
+  min_epochs: null
+  max_steps: -1
+  min_steps: null
+  max_time: null
+  limit_train_batches: null
+  limit_val_batches: null
+  limit_test_batches: null
+  limit_predict_batches: null
+  val_check_interval: null
+  log_every_n_steps: 50
+  accelerator: gpu
+  strategy: null
+  sync_batchnorm: false
+  precision: 16
+  enable_model_summary: true
+  weights_save_path: null
+  num_sanity_val_steps: 2
+  resume_from_checkpoint: null
+  profiler: null
+  benchmark: null
+  deterministic: null
+  reload_dataloaders_every_n_epochs: 0
+  auto_lr_find: false
+  replace_sampler_ddp: true
+  detect_anomaly: false
+  auto_scale_batch_size: false
+  plugins: null
+  amp_backend: native
+  amp_level: null
+  move_metrics_to_cpu: false
+  multiple_trainloader_mode: max_size_cycle
+ckpt_path: null
+model:
+  class_path: litmodules.LitSGN
+  init_args:
+    num_classes: 60
+    length: 20
+    num_joints: 25
+    num_features: 3
+    lr: 0.001
+    weight_decay: 0.0001
+data:
+  class_path: datamodules.NTUDataModule
+  init_args:
+    data_dir: "."
+    batch_size: 64
+    eval_batch_size: 512
+    num_classes: 60
+    eval_type: subject
+    num_workers: 6
+    theta: 17
+    length: 20
