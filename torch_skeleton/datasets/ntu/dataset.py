@@ -59,6 +59,7 @@ class NTUDataset(SkeletonDataset):
         eval_type,
         split,
         root: Optional[str] = None,
+        preprocess: Optional[Callable] = None,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
         num_workers: int = 0,
@@ -79,7 +80,7 @@ class NTUDataset(SkeletonDataset):
             "nturgbd_skeletons_s018_to_s032.zip": "e8ae4bdd92c2be95dbd364ad54e82f89",
         }
 
-        super().__init__(root, num_workers)
+        super().__init__(root=root, preprocess=preprocess, num_workers=num_workers)
 
         if transform is not None:
             self.transform = transform
@@ -118,7 +119,7 @@ class NTUDataset(SkeletonDataset):
         return x
 
     def __getitem__(self, idx):
-        path = self.parsed_file_paths[idx]
+        path = self.load_file_paths[idx]
 
         with open(path, "rb") as f:
             x = np.load(f)

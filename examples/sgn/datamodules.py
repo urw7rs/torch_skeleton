@@ -51,9 +51,9 @@ class NTUDataModule(LightningDataModule):
                 num_classes=self.hparams.num_classes,
                 eval_type=self.hparams.eval_type,
                 split="train",
+                preprocess=preprocess,
                 transform=T.Compose(
                     [
-                        preprocess,
                         T.SampleFrames(num_frames=self.hparams.length),
                         T.RandomRotate(degrees=self.theta),
                         T.PadFrames(max_frames=self.hparams.length),
@@ -67,9 +67,9 @@ class NTUDataModule(LightningDataModule):
                 num_classes=self.hparams.num_classes,
                 eval_type=self.hparams.eval_type,
                 split="val",
+                preprocess=preprocess,
                 transform=T.Compose(
                     [
-                        preprocess,
                         T.SampleFrames(num_frames=self.hparams.length),
                         T.PadFrames(max_frames=self.hparams.length),
                     ]
@@ -82,9 +82,9 @@ class NTUDataModule(LightningDataModule):
                 num_classes=self.hparams.num_classes,
                 eval_type=self.hparams.eval_type,
                 split="val",
+                preprocess=preprocess,
                 transform=T.Compose(
                     [
-                        preprocess,
                         T.SampleFrames(num_frames=self.hparams.length, num_clips=5),
                         T.PadFrames(max_frames=self.hparams.length, axis=2),
                     ]
