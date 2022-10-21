@@ -305,6 +305,9 @@ noise_mot_thres_hi = 2
 
 
 def denoising_by_length(x):
+    if x.shape[0] == 1:
+        return x
+
     filtered_bodies = []
     for body in np.split(x, indices_or_sections=x.shape[0], axis=0):
         _, indices = get_indices(body)
@@ -328,6 +331,9 @@ def get_valid_frames_by_spread(points):
 
 
 def denoising_by_spread(x):
+    if x.shape[0] == 1:
+        return x
+
     denoised_bodies = []
     for body in np.split(x, indices_or_sections=x.shape[0], axis=0):
         valid_indices = get_valid_frames_by_spread(body[0])
@@ -348,6 +354,9 @@ def denoising_by_spread(x):
 
 
 def denoising_by_motion(x):
+    if x.shape[0] == 1:
+        return x
+
     denoised_bodies = [x[0:1]]
     for body in np.split(x[1:], indices_or_sections=x.shape[0] - 1, axis=0):
         motion = np.sum(np.var(body.reshape(-1, 3), axis=0))
@@ -367,25 +376,12 @@ def denoising_by_motion(x):
 
 
 def denoising_bodies_data(x):
-
-    # Step 1: Denoising based on frame length.
     x = denoising_by_length(x)
 
-    if x.shape[0] == 1:  # only has one bodyID left after step 1
-        return x
-
-    # Step 2: Denoising based on spread.
     x = denoising_by_spread(x)
-
-    if x.shape[0] == 1:
-        return x
 
     x = denoising_by_motion(x)
     return x
-
-
-def get_one_actor_points(x):
-    return x[0:1]
 
 
 def intersect_indices(actor1, actor2):
@@ -424,6 +420,37 @@ def get_two_actors_points(x):
 
         x = np.concatenate([main_actor, second_actor], axis=0)
 
+    return x
+
+
+def merge_bodies(x):
+    num_bodies = x.shape[0]
+
+    if num_bodies == 1:
+        return x
+
+    main_actor = x[0:1]
+    second_actor = np.zeros_like(main_actor)
+
+    actors = np.split(x[1:], indices_or_sections=num_bodies - 1, axis=0)
+
+    for actor in actors:
+        _, t_indices1 = get_indices(main_actor)
+        _, t_indices2 = get_indices(actor)
+
+        intersect = np.intersect1d(t_indices1, t_indices2)
+
+        if len(intersect) == 0:  # no overlap with actor1
+            main_actor[:, t_indices2] = actor[:, t_indices2]
+        else:
+            _, t_indices1 = get_indices(second_actor)
+            _, t_indices2 = get_indices(actor)
+
+            intersect = np.intersect1d(t_indices1, t_indices2)
+            if len(intersect) == 0:
+                second_actor[:, t_indices2] = actor[:, t_indices2]
+
+    x = np.concatenate([main_actor, second_actor], axis=0)
     return x
 
 

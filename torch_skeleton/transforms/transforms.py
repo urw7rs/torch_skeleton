@@ -99,3 +99,33 @@ class RandomRotate:
 class Denoise:
     def __call__(self, x):
         return functions.get_raw_denoised_data(x)
+
+
+class SortByMotion:
+    def __call__(self, x):
+        return functions.select_k_bodies(x, k=x.shape[0])
+
+
+class DenoiseByLength:
+    def __call__(self, x):
+        return functions.denoising_by_length(x)
+
+
+class DenoiseBySpread:
+    def __call__(self, x):
+        return functions.denoising_by_spread(x)
+
+
+class DenoiseByMotion:
+    def __call__(self, x):
+        return functions.denoising_by_motion(x)
+
+
+class MergeBodies:
+    def __call__(self, x):
+        return functions.merge_bodies(x)
+
+
+class NonZeroFrames:
+    def __call__(self, x):
+        functions.nonzero_frames(x)

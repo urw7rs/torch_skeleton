@@ -2,11 +2,11 @@ from typing import Optional
 
 from pytorch_lightning import LightningDataModule
 
-import torch_skeleton.transforms as T
-
 from torch.utils.data import DataLoader
 
 from torch_skeleton.datasets import NTUDataset
+
+import torch_skeleton.transforms as T
 
 
 class NTUDataModule(LightningDataModule):
@@ -39,7 +39,12 @@ class NTUDataModule(LightningDataModule):
     def setup(self, stage: Optional[str] = None):
         preprocess = T.Compose(
             [
-                T.Denoise(),
+                T.SortByMotion(),
+                T.DenoiseByLength(),
+                T.DenoiseBySpread(),
+                T.DenoiseByMotion(),
+                T.MergeBodies(),
+                T.NonZeroFrames(),
                 T.SubJoint(joint_id=1, all=False),
                 T.SplitFrames(),
             ]
