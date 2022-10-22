@@ -426,31 +426,29 @@ def get_two_actors_points(x):
 def merge_bodies(x):
     num_bodies = x.shape[0]
 
-    if num_bodies == 1:
-        return x
+    if num_bodies > 1:
+        main_actor = x[0:1]
+        second_actor = np.zeros_like(main_actor)
 
-    main_actor = x[0:1]
-    second_actor = np.zeros_like(main_actor)
+        actors = np.split(x[1:], indices_or_sections=num_bodies - 1, axis=0)
 
-    actors = np.split(x[1:], indices_or_sections=num_bodies - 1, axis=0)
-
-    for actor in actors:
-        _, t_indices1 = get_indices(main_actor)
-        _, t_indices2 = get_indices(actor)
-
-        intersect = np.intersect1d(t_indices1, t_indices2)
-
-        if len(intersect) == 0:  # no overlap with actor1
-            main_actor[:, t_indices2] = actor[:, t_indices2]
-        else:
-            _, t_indices1 = get_indices(second_actor)
+        for actor in actors:
+            _, t_indices1 = get_indices(main_actor)
             _, t_indices2 = get_indices(actor)
 
             intersect = np.intersect1d(t_indices1, t_indices2)
-            if len(intersect) == 0:
-                second_actor[:, t_indices2] = actor[:, t_indices2]
 
-    x = np.concatenate([main_actor, second_actor], axis=0)
+            if len(intersect) == 0:  # no overlap with actor1
+                main_actor[:, t_indices2] = actor[:, t_indices2]
+            else:
+                _, t_indices1 = get_indices(second_actor)
+                _, t_indices2 = get_indices(actor)
+
+                intersect = np.intersect1d(t_indices1, t_indices2)
+                if len(intersect) == 0:
+                    second_actor[:, t_indices2] = actor[:, t_indices2]
+
+        x = np.concatenate([main_actor, second_actor], axis=0)
 
     x = nonzero_frames(x)
     return x
