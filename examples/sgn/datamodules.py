@@ -44,7 +44,6 @@ class NTUDataModule(LightningDataModule):
                 T.DenoiseBySpread(),
                 T.DenoiseByMotion(),
                 T.MergeBodies(),
-                T.NonZeroFrames(),
                 T.SubJoint(joint_id=1, all=False),
                 T.SplitFrames(),
             ]

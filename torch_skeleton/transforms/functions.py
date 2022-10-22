@@ -455,9 +455,6 @@ def merge_bodies(x):
 
 
 def nonzero_frames(x):
-    if x.shape[0] == 1:
-        return x
-
     _, t_indices = get_indices(x.sum(axis=0, keepdims=True))
     return x[:, t_indices]
 

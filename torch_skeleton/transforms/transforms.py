@@ -98,7 +98,12 @@ class RandomRotate:
 
 class Denoise:
     def __call__(self, x):
-        return functions.get_raw_denoised_data(x)
+        x = functions.select_k_bodies(x, k=x.shape[0])
+        x = functions.denoising_by_length(x)
+        x = functions.denoising_by_spread(x)
+        x = functions.denoising_by_motion(x)
+        x = functions.merge_bodies(x)
+        return x
 
 
 class SortByMotion:
