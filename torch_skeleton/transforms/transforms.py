@@ -123,7 +123,9 @@ class DenoiseByMotion:
 
 class MergeBodies:
     def __call__(self, x):
-        return functions.merge_bodies(x)
+        x = functions.merge_bodies(x)
+        x = functions.nonzero_frames(x)
+        return x
 
 
 class NonZeroFrames:
