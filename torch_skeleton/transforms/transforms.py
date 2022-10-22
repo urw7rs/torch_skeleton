@@ -128,4 +128,4 @@ class MergeBodies:
 
 class NonZeroFrames:
     def __call__(self, x):
-        functions.nonzero_frames(x)
+        return functions.nonzero_frames(x)
