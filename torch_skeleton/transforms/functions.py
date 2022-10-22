@@ -451,6 +451,8 @@ def merge_bodies(x):
                 second_actor[:, t_indices2] = actor[:, t_indices2]
 
     x = np.concatenate([main_actor, second_actor], axis=0)
+
+    x = nonzero_frames(x)
     return x
 
 
