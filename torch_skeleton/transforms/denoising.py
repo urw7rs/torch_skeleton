@@ -16,7 +16,8 @@ class Denoise:
 
             if x.shape[0] > 1:
                 x = functions.merge_bodies(x)
-                x = functions.remove_zero_frames(x)
+
+            x = functions.remove_zero_frames(x)
 
         return x
 
