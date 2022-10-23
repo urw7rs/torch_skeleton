@@ -305,9 +305,6 @@ noise_mot_thres_hi = 2
 
 
 def denoising_by_length(x):
-    if x.shape[0] == 1:
-        return x
-
     filtered_bodies = []
     for body in np.split(x, indices_or_sections=x.shape[0], axis=0):
         _, indices = get_indices(body)
@@ -331,9 +328,6 @@ def get_valid_frames_by_spread(points):
 
 
 def denoising_by_spread(x):
-    if x.shape[0] == 1:
-        return x
-
     denoised_bodies = []
     for body in np.split(x, indices_or_sections=x.shape[0], axis=0):
         valid_indices = get_valid_frames_by_spread(body[0])
@@ -354,9 +348,6 @@ def denoising_by_spread(x):
 
 
 def denoising_by_motion(x):
-    if x.shape[0] == 1:
-        return x
-
     denoised_bodies = [x[0:1]]
     for body in np.split(x[1:], indices_or_sections=x.shape[0] - 1, axis=0):
         motion = np.sum(np.var(body.reshape(-1, 3), axis=0))
@@ -451,7 +442,7 @@ def merge_bodies(x):
     return x
 
 
-def nonzero_frames(x):
+def remove_zero_frames(x):
     _, t_indices = get_indices(x.sum(axis=0, keepdims=True))
     return x[:, t_indices]
 
@@ -464,6 +455,6 @@ def get_raw_denoised_data(x):
     if num_bodies > 1:  # only 1 actor
         x = get_two_actors_points(x)
 
-        x = nonzero_frames(x)
+        x = remove_zero_frames(x)
 
     return x

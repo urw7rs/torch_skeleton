@@ -130,11 +130,11 @@ class MergeBodies:
     def __call__(self, x):
         if x.shape[0] > 1:
             x = functions.merge_bodies(x)
-            x = functions.nonzero_frames(x)
+            x = functions.remove_zero_frames(x)
 
         return x
 
 
-class NonZeroFrames:
+class RemoveZeroFrames:
     def __call__(self, x):
-        return functions.nonzero_frames(x)
+        return functions.remove_zero_frames(x)
