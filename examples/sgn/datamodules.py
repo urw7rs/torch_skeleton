@@ -39,11 +39,7 @@ class NTUDataModule(LightningDataModule):
     def setup(self, stage: Optional[str] = None):
         preprocess = T.Compose(
             [
-                T.SortByMotion(),
-                T.DenoiseByLength(),
-                T.DenoiseBySpread(),
-                T.DenoiseByMotion(),
-                T.MergeBodies(),
+                T.Denoise(),
                 T.SubJoint(joint_id=1, all=False),
                 T.SplitFrames(),
             ]
