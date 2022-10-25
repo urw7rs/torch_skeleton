@@ -59,7 +59,6 @@ class NTUDataModule(LightningDataModule):
                         T.PadFrames(max_frames=self.hparams.length),
                     ]
                 ),
-                num_workers=self.num_workers,
             )
 
             self.val_set = NTUDataset(
@@ -74,7 +73,6 @@ class NTUDataModule(LightningDataModule):
                         T.PadFrames(max_frames=self.hparams.length),
                     ]
                 ),
-                num_workers=self.num_workers,
             )
         else:
             self.test_set = NTUDataset(
@@ -89,7 +87,6 @@ class NTUDataModule(LightningDataModule):
                         T.PadFrames(max_frames=self.hparams.length, axis=2),
                     ]
                 ),
-                num_workers=self.num_workers,
             )
 
     def train_dataloader(self):
