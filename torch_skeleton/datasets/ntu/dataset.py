@@ -13,7 +13,7 @@ from . import ntu
 from . import utils
 
 from ..base_dataset import CachingDataset
-from torch_skeleton.utils import listdir, check_md5sum
+from torch_skeleton.utils import check_md5sum
 
 
 class NTUDataset(CachingDataset):
