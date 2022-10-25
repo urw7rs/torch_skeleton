@@ -10,10 +10,10 @@ import numpy as np
 
 from typing import Optional, Callable
 
-from .base_dataset import CachingDataset
+from .base_dataset import LazyDataset
 
 
-class UCLA(CachingDataset):
+class UCLA(LazyDataset):
     urls = {"all_sqe.zip": "https://www.dropbox.com/s/10pcm4pksjy6mkq/all_sqe.zip?dl=1"}
 
     checksums = {"all_sqe.zip": "6db59b046f5110fa644774afb2a906d2"}

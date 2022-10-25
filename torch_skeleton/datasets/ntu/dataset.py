@@ -12,11 +12,11 @@ import numpy as np
 from . import ntu
 from . import utils
 
-from ..base_dataset import CachingDataset
+from ..base_dataset import LazyDataset
 from torch_skeleton.utils import check_md5sum
 
 
-class NTUDataset(CachingDataset):
+class NTUDataset(LazyDataset):
     urls = {
         "nturgbd_skeletons_s001_to_s017.zip": "https://drive.google.com/uc?id=1CUZnBtYwifVXS21yVg62T-vrPVayso5H",
         "nturgbd_skeletons_s018_to_s032.zip": "https://drive.google.com/uc?id=1tEbuaEqMxAV7dNc4fqu1O4M7mC6CJ50w",
@@ -53,9 +53,12 @@ class NTUDataset(CachingDataset):
         eval_type,
         split,
         root: Optional[str] = None,
+        preprocess: Optional[str] = None,
         transform: Optional[Callable] = None,
     ):
         self.root = osp.join(root, "NTU")
+
+        self.preprocess = preprocess
 
         self.num_classes = num_classes
         self.eval_type = eval_type
@@ -85,9 +88,9 @@ class NTUDataset(CachingDataset):
                 with zipfile.ZipFile(path, "r") as zip_ref:
                     if file_name == "nturgbd_skeletons_s001_to_s017.zip":
                         extract_dir = osp.dirname(path)
-
                     elif file_name == "nturgbd_skeletons_s018_to_s032.zip":
                         extract_dir = osp.join(osp.dirname(path), "nturgb+d_skeletons")
+
                     zip_ref.extractall(extract_dir)
 
         if file_name.split(".")[-1] == "txt":
@@ -97,7 +100,6 @@ class NTUDataset(CachingDataset):
         with zipfile.ZipFile(path, "r") as zip_ref:
             if file_name == "nturgbd_skeletons_s001_to_s017.zip":
                 extract_dir = osp.dirname(path)
-
             elif file_name == "nturgbd_skeletons_s018_to_s032.zip":
                 extract_dir = osp.join(osp.dirname(path), "nturgb+d_skeletons")
 
@@ -127,6 +129,9 @@ class NTUDataset(CachingDataset):
     def process(self, data):
         skeleton_sequence = ntu.loads(data)
         x = ntu.as_numpy(skeleton_sequence)
+
+        x = self.preprocess(x)
+
         return x
 
     def save(self, data, path):

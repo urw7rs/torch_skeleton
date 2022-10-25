@@ -1,11 +1,10 @@
-from multiprocessing import process
 import os
 import os.path as osp
 
 from torch.utils.data import Dataset
 
 
-class CachingDataset(Dataset):
+class LazyDataset(Dataset):
     @property
     def download_paths(self):
         return []
