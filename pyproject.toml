@@ -26,6 +26,7 @@ dependencies = [
     "einops",
     "scipy",
     "gdown",
+    "wget",
 ]
 
 [tool.pytest.ini_options]
