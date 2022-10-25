@@ -1,147 +1,66 @@
-from collections.abc import Callable
+from multiprocessing import process
 import os
 import os.path as osp
-import multiprocessing as mp
-
-import numpy as np
-
-from typing import Optional
 
 from torch.utils.data import Dataset
 
 
-class SkeletonDataset(Dataset):
+class CachingDataset(Dataset):
     @property
-    def root_dir(self):
-        return self.root
-
-    @property
-    def raw_dir(self):
-        raw_dir = osp.join(self.root_dir, "raw")
-        if not osp.exists(raw_dir):
-            os.makedirs(raw_dir)
-        return raw_dir
-
-    @property
-    def raw_file_names(self):
-        raise NotImplementedError
+    def download_paths(self):
+        return []
 
     @property
     def raw_file_paths(self):
-        return [osp.join(self.raw_dir, file_name) for file_name in self.raw_file_names]
+        return self._raw_file_paths
 
-    @property
-    def download_paths(self):
-        return ["./"]
-
-    @property
-    def parsed_dir(self):
-        parsed_dir = osp.join(self.root_dir, "parsed")
-        os.makedirs(parsed_dir, exist_ok=True)
-        return parsed_dir
-
-    @property
-    def preprocessed_dir(self):
-        preprocessed_dir = osp.join(self.root_dir, "preprocessed")
-        os.makedirs(preprocessed_dir, exist_ok=True)
-        return preprocessed_dir
-
-    def __init__(
-        self,
-        root: Optional[str] = None,
-        preprocess: Optional[Callable] = None,
-        num_workers: Optional[int] = None,
-    ):
+    def __init__(self):
         super().__init__()
 
-        self.root = "./" if root is None else root
-        self.preprocess = preprocess
-
+        raw_file_paths = []
         for path in self.download_paths:
-            if not osp.exists(path):
-                self.download(path)
+            dir = osp.dirname(path)
+            if not osp.exists(dir):
+                os.makedirs(dir, exist_ok=True)
 
-        if num_workers == 0:
-            use_multiprocessing = False
-        elif num_workers is None:
-            use_multiprocessing = True
-        elif num_workers > 0:
-            use_multiprocessing = True
-        else:
-            raise NotImplementedError
+            raw_file_paths.extend(self.download(path))
 
-        if use_multiprocessing:
-            with mp.Pool(num_workers) as p:
-                self.parsed_file_paths = list(
-                    p.imap_unordered(self._parse, self.raw_file_paths)
-                )
+        self._raw_file_paths = raw_file_paths
 
-                if self.preprocess is None:
-                    self.final_file_paths = self.parsed_file_paths
-                else:
-                    self.final_file_paths = list(
-                        p.imap_unordered(
-                            self._preprocess, self.parsed_file_paths, chunksize=512
-                        )
-                    )
-        else:
-            self.parsed_file_paths = list(map(self._parse, self.raw_file_paths))
-
-            if self.preprocess is None:
-                self.final_file_paths = self.parsed_file_paths
-            else:
-                self.final_file_paths = list(
-                    map(self._preprocess, self.parsed_file_paths)
-                )
-
-        self.final_file_paths = sorted(self.final_file_paths)
+        self._path_map = {}
 
     def download(self, path):
-        return path
+        return []
 
-    def _parse(self, path):
-        file_name = ".".join(osp.basename(path).split(".")[:-1])
-        parsed_path = osp.join(self.parsed_dir, f"{file_name}.npy")
+    def open_raw(self, path):
+        with open(path, encoding="utf-8") as f:
+            string = f.read()
+        return string
 
-        if osp.exists(parsed_path):
-            return parsed_path
+    def open(self, path):
+        raise NotImplementedError
 
-        x = self.parse(path)
+    def process(self, data):
+        raise NotImplementedError
 
-        with open(parsed_path, "wb") as f:
-            np.save(f, x)
-
-        return parsed_path
-
-    def parse(self, path):
-        return path
-
-    def _preprocess(self, path):
-        with open(path, "rb") as f:
-            x = np.load(f)
-
-        x = self.preprocess(x)
-
-        file_name = osp.basename(path)
-        preprocessed_path = osp.join(self.preprocessed_dir, file_name)
-
-        with open(preprocessed_path, "wb") as f:
-            np.save(f, x)
-
-        return preprocessed_path
-
-    def get(self, path, x):
+    def save(self, data, path):
         raise NotImplementedError
 
     def __getitem__(self, idx):
-        path = self.final_file_paths[idx]
+        path = self.raw_file_paths[idx]
+        processed_path = self._path_map.get(path, None)
 
-        with open(path, "rb") as f:
-            x = np.load(f)
+        if processed_path is None:
+            data = self.open_raw(path)
+            data = self.process(data)
 
-        x, y = self.get(path, x)
+            processed_path = self.save(data, path)
 
-        return x, y
+            assert osp.exists(processed_path)
+
+            self._path_map[path] = processed_path
+
+        return self.open(processed_path)
 
     def __len__(self):
-        return len(self.final_file_paths)
+        return len(self.raw_file_paths)

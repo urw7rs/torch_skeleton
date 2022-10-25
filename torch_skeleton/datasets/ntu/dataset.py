@@ -1,3 +1,4 @@
+import os
 import os.path as osp
 
 import gdown
@@ -6,18 +7,27 @@ import urllib.request
 from typing import Optional, Callable
 
 import zipfile
+import numpy as np
 
 from . import ntu
 from . import utils
 
-from torch_skeleton.datasets.base_dataset import SkeletonDataset
-from torch_skeleton.utils import listdir
+from ..base_dataset import CachingDataset
+from torch_skeleton.utils import listdir, check_md5sum
 
 
-class NTUDataset(SkeletonDataset):
-    @property
-    def root_dir(self):
-        return osp.join(self.root, "NTU")
+class NTUDataset(CachingDataset):
+    urls = {
+        "nturgbd_skeletons_s001_to_s017.zip": "https://drive.google.com/uc?id=1CUZnBtYwifVXS21yVg62T-vrPVayso5H",
+        "nturgbd_skeletons_s018_to_s032.zip": "https://drive.google.com/uc?id=1tEbuaEqMxAV7dNc4fqu1O4M7mC6CJ50w",
+        "NTU_RGBD120_samples_with_missing_skeletons.txt": "https://raw.githubusercontent.com/shahroudy/NTURGB-D/master/Matlab/NTU_RGBD120_samples_with_missing_skeletons.txt",
+        "NTU_RGBD_samples_with_missing_skeletons.txt": "https://raw.githubusercontent.com/shahroudy/NTURGB-D/master/Matlab/NTU_RGBD_samples_with_missing_skeletons.txt",
+    }
+
+    checksums = {
+        "nturgbd_skeletons_s001_to_s017.zip": "67d9e24f858e5736a9826a2065e229fe",
+        "nturgbd_skeletons_s018_to_s032.zip": "e8ae4bdd92c2be95dbd364ad54e82f89",
+    }
 
     @property
     def download_paths(self):
@@ -35,11 +45,66 @@ class NTUDataset(SkeletonDataset):
         else:
             raise NotImplementedError
 
-        return [osp.join(self.raw_dir, file_name) for file_name in file_names]
+        return [osp.join(self.root, "raw", file_name) for file_name in file_names]
 
-    @property
-    def raw_file_paths(self):
-        paths = listdir(self.raw_dir, ext="skeleton")
+    def __init__(
+        self,
+        num_classes,
+        eval_type,
+        split,
+        root: Optional[str] = None,
+        transform: Optional[Callable] = None,
+    ):
+        self.root = osp.join(root, "NTU")
+
+        self.num_classes = num_classes
+        self.eval_type = eval_type
+        self.split = split
+
+        super().__init__()
+
+        if transform is not None:
+            self.transform = transform
+        else:
+            self.transform = lambda x: x
+
+    def download(self, path):
+        file_name = osp.basename(path)
+
+        url = self.urls[file_name]
+
+        if not osp.exists(path):
+            if file_name.split(".")[-1] == "txt":
+                urllib.request.urlretrieve(url, path)
+            else:
+                gdown.download(url, output=path, quiet=False)
+
+                if check_md5sum(path, self.checksums[file_name]) is False:
+                    print("Warning! md5sum doesn't match")
+
+                with zipfile.ZipFile(path, "r") as zip_ref:
+                    if file_name == "nturgbd_skeletons_s001_to_s017.zip":
+                        extract_dir = osp.dirname(path)
+
+                    elif file_name == "nturgbd_skeletons_s018_to_s032.zip":
+                        extract_dir = osp.join(osp.dirname(path), "nturgb+d_skeletons")
+                    zip_ref.extractall(extract_dir)
+
+        if file_name.split(".")[-1] == "txt":
+            return []
+
+        paths = []
+        with zipfile.ZipFile(path, "r") as zip_ref:
+            if file_name == "nturgbd_skeletons_s001_to_s017.zip":
+                extract_dir = osp.dirname(path)
+
+            elif file_name == "nturgbd_skeletons_s018_to_s032.zip":
+                extract_dir = osp.join(osp.dirname(path), "nturgb+d_skeletons")
+
+            for path_obj in zip_ref.filelist:
+                path = osp.join(extract_dir, path_obj.filename)
+                if osp.isfile(path):
+                    paths.append(path)
 
         for path in self.download_paths:
             if path.split(".")[-1] == "txt":
@@ -54,78 +119,29 @@ class NTUDataset(SkeletonDataset):
 
         return paths
 
-    def __init__(
-        self,
-        num_classes,
-        eval_type,
-        split,
-        root: Optional[str] = None,
-        preprocess: Optional[Callable] = None,
-        transform: Optional[Callable] = None,
-        target_transform: Optional[Callable] = None,
-        num_workers: int = 0,
-    ):
-        self.num_classes = num_classes
-        self.eval_type = eval_type
-        self.split = split
+    def open(self, path):
+        x = np.load(path)
+        y = utils.label_from_name(osp.basename(path))
+        return self.transform(x), y
 
-        self.urls = {
-            "nturgbd_skeletons_s001_to_s017.zip": "https://drive.google.com/uc?id=1CUZnBtYwifVXS21yVg62T-vrPVayso5H",
-            "nturgbd_skeletons_s018_to_s032.zip": "https://drive.google.com/uc?id=1tEbuaEqMxAV7dNc4fqu1O4M7mC6CJ50w",
-            "NTU_RGBD120_samples_with_missing_skeletons.txt": "https://raw.githubusercontent.com/shahroudy/NTURGB-D/master/Matlab/NTU_RGBD120_samples_with_missing_skeletons.txt",
-            "NTU_RGBD_samples_with_missing_skeletons.txt": "https://raw.githubusercontent.com/shahroudy/NTURGB-D/master/Matlab/NTU_RGBD_samples_with_missing_skeletons.txt",
-        }
-
-        self.checksums = {
-            "nturgbd_skeletons_s001_to_s017.zip": "67d9e24f858e5736a9826a2065e229fe",
-            "nturgbd_skeletons_s018_to_s032.zip": "e8ae4bdd92c2be95dbd364ad54e82f89",
-        }
-
-        super().__init__(root=root, preprocess=preprocess, num_workers=num_workers)
-
-        if transform is not None:
-            self.transform = transform
-        else:
-            self.transform = lambda x: x
-
-        if target_transform is not None:
-            self.target_transform = target_transform
-        else:
-            self.target_transform = lambda x: x
-
-    def download(self, path):
-        file_name = osp.basename(path)
-
-        url = self.urls[file_name]
-
-        if file_name == "nturgbd_skeletons_s001_to_s017.zip":
-            md5 = self.checksums[file_name]
-            gdown.cached_download(url, path=path, md5=md5, quiet=False)
-
-            with zipfile.ZipFile(path, "r") as zip_ref:
-                zip_ref.extractall(osp.dirname(path))
-        elif file_name == "nturgbd_skeletons_s018_to_s032.zip":
-            md5 = self.checksums[file_name]
-            gdown.cached_download(url, path=path, md5=md5, quiet=False)
-
-            with zipfile.ZipFile(path, "r") as zip_ref:
-                zip_ref.extractall(osp.join(osp.dirname(path), "nturgb+d_skeletons"))
-        else:
-            urllib.request.urlretrieve(url, path)
-
-    def parse(self, path):
-        with open(path, encoding="utf-8") as f:
-            skeleton_sequence = ntu.loads(f.read())
-            x = ntu.as_numpy(skeleton_sequence)
+    def process(self, data):
+        skeleton_sequence = ntu.loads(data)
+        x = ntu.as_numpy(skeleton_sequence)
         return x
 
-    def get(self, path, x):
-        y = utils.label_from_name(osp.basename(path))
+    def save(self, data, path):
+        file_name = osp.basename(path)
+        pre, _ = osp.splitext(file_name)
 
-        x = self.transform(x)
-        y = self.target_transform(y)
+        path = osp.join(self.root, "processed", pre + ".npy")
 
-        return x, y
+        dir = osp.dirname(path)
+        if not osp.exists(dir):
+            os.makedirs(dir)
+
+        np.save(path, data)
+
+        return path
 
 
 def filter_num_classes(paths, num_classes):
