@@ -46,6 +46,7 @@ examples = [
     "torch-geometric",
     "jsonargparse[signatures]>=4.12.0",
 ]
+doc = ["sphinx"]
 
 [tool.black]
 line-length = 88
