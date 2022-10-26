@@ -2,7 +2,7 @@
 
 Popular skeleton datasets and transforms
 
-## Insatllation
+## Installation
 
 ```bash
 pip install -e .
