@@ -63,3 +63,6 @@ class MapDataset(Dataset):
         x, y = self.dataset[index]
         x = self.fn(x)
         return x, y
+
+    def __len__(self):
+        return len(self.dataset)
