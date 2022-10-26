@@ -135,7 +135,7 @@ model:
 data:
   class_path: datamodules.NTUDataModule
   init_args:
-    data_dir: "."
+    data_dir: "data"
     batch_size: 64
     eval_batch_size: 512
     num_classes: 60
