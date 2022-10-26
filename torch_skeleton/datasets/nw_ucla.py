@@ -27,7 +27,7 @@ class UCLA(Dataset):
                 "https://www.dropbox.com/s/10pcm4pksjy6mkq/all_sqe.zip?dl=1", path
             )
 
-            skel_utils.extract_zip(path, osp.join(self.root, "raw"))
+            skel_utils.extract_zip(path, self.root)
 
         self.file_paths = skel_utils.listdir(self.root, ext="json")
 

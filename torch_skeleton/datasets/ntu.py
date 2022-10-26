@@ -29,7 +29,7 @@ class NTU(Dataset):
                 "https://drive.google.com/uc?id=1CUZnBtYwifVXS21yVg62T-vrPVayso5H",
                 path=path,
             )
-            skel_utils.extract_zip(path, osp.join(self.root, "raw"))
+            skel_utils.extract_zip(path, self.root)
 
         if num_classes == 120:
             path = osp.join(self.root, "nturgbd_skeletons_s018_to_s032.zip")
@@ -38,9 +38,7 @@ class NTU(Dataset):
                     "https://drive.google.com/uc?id=1tEbuaEqMxAV7dNc4fqu1O4M7mC6CJ50w",
                     path=None,
                 )
-                skel_utils.extract_zip(
-                    path, osp.join(self.root, "raw", "nturgb+d_skeletons")
-                )
+                skel_utils.extract_zip(path, osp.join(self.root, "nturgb+d_skeletons"))
 
         if num_classes == 60:
             missing_path = osp.join(self.root, "ntu60_missing.txt")
