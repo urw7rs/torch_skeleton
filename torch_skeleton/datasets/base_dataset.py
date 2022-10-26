@@ -1,65 +1,65 @@
-import os
 import os.path as osp
 
+import shutil
+import tempfile
+
+import torch
 from torch.utils.data import Dataset
 
+import torch_skeleton.utils as skel_utils
 
-class LazyDataset(Dataset):
-    @property
-    def download_paths(self):
-        return []
+from typing import Callable, Optional
 
-    @property
-    def raw_file_paths(self):
-        return self._raw_file_paths
 
-    def __init__(self):
+class DiskCache(Dataset):
+    def __init__(self, root, dataset: Dataset, transform: Optional[Callable] = None):
         super().__init__()
 
-        raw_file_paths = []
-        for path in self.download_paths:
-            dir = osp.dirname(path)
-            if not osp.exists(dir):
-                os.makedirs(dir, exist_ok=True)
+        self.temp_dir = tempfile.TemporaryDirectory(dir=root)
 
-            raw_file_paths.extend(self.download(path))
+        self.root = self.temp_dir.name
+        self.transform = transform
 
-        self._raw_file_paths = raw_file_paths
+        skel_utils.makedirs(self.root)
+        shutil.rmtree(self.root)
+        skel_utils.makedirs(self.root)
 
-        self._path_map = {}
+        self.dataset = dataset
 
-    def download(self, path):
-        return []
+    def cache_path(self, index):
+        return osp.join(self.root, f"{index}.pt")
 
-    def open_raw(self, path):
-        with open(path, encoding="utf-8") as f:
-            string = f.read()
-        return string
+    def __getitem__(self, index):
+        path = self.cache_path(index)
 
-    def open(self, path):
-        raise NotImplementedError
+        if osp.exists(path):
+            x, y = torch.load(path)
+        else:
+            x, y = self.dataset[index]
 
-    def process(self, data):
-        raise NotImplementedError
+            torch.save([x, y], self.cache_path(index))
 
-    def save(self, data, path):
-        raise NotImplementedError
+        if self.transform is not None:
+            x = self.transform(x)
 
-    def __getitem__(self, idx):
-        path = self.raw_file_paths[idx]
-        processed_path = self._path_map.get(path, None)
-
-        if processed_path is None:
-            data = self.open_raw(path)
-            data = self.process(data)
-
-            processed_path = self.save(data, path)
-
-            assert osp.exists(processed_path)
-
-            self._path_map[path] = processed_path
-
-        return self.open(processed_path)
+        return x, y
 
     def __len__(self):
-        return len(self.raw_file_paths)
+        return len(self.dataset)
+
+    def __del__(self):
+        self.temp_dir.cleanup()
+
+
+class MapDataset(Dataset):
+    def __init__(self, dataset: Dataset, fn: Callable):
+        super().__init__()
+
+        self.dataset = dataset
+
+        self.fn = fn
+
+    def __getitem__(self, index):
+        x, y = self.dataset[index]
+        x = self.fn(x)
+        return x, y

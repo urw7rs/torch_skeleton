@@ -4,7 +4,7 @@ from pytorch_lightning import LightningDataModule
 
 from torch.utils.data import DataLoader
 
-from torch_skeleton.datasets import NTUDataset
+from torch_skeleton.datasets import NTU, DiskCache, MapDataset
 
 import torch_skeleton.transforms as T
 
@@ -46,13 +46,20 @@ class NTUDataModule(LightningDataModule):
         )
 
         if stage == "fit" or stage is None:
-            self.train_set = NTUDataset(
+            dataset = NTU(
                 root=self.data_dir,
                 num_classes=self.hparams.num_classes,
                 eval_type=self.hparams.eval_type,
                 split="train",
-                preprocess=preprocess,
-                transform=T.Compose(
+                transform=preprocess,
+            )
+
+            self.train_set = MapDataset(
+                DiskCache(
+                    root=dataset.root,
+                    dataset=dataset,
+                ),
+                T.Compose(
                     [
                         T.SampleFrames(num_frames=self.hparams.length),
                         T.RandomRotate(degrees=self.theta),
@@ -61,13 +68,20 @@ class NTUDataModule(LightningDataModule):
                 ),
             )
 
-            self.val_set = NTUDataset(
+            dataset = NTU(
                 root=self.data_dir,
                 num_classes=self.hparams.num_classes,
                 eval_type=self.hparams.eval_type,
                 split="val",
-                preprocess=preprocess,
-                transform=T.Compose(
+                transform=preprocess,
+            )
+
+            self.val_set = MapDataset(
+                DiskCache(
+                    root=dataset.root,
+                    dataset=dataset,
+                ),
+                T.Compose(
                     [
                         T.SampleFrames(num_frames=self.hparams.length),
                         T.PadFrames(max_frames=self.hparams.length),
@@ -75,16 +89,23 @@ class NTUDataModule(LightningDataModule):
                 ),
             )
         else:
-            self.test_set = NTUDataset(
+            dataset = NTU(
                 root=self.data_dir,
                 num_classes=self.hparams.num_classes,
                 eval_type=self.hparams.eval_type,
                 split="val",
-                preprocess=preprocess,
-                transform=T.Compose(
+                tranform=preprocess,
+            )
+
+            self.test_set = MapDataset(
+                DiskCache(
+                    root=dataset.root,
+                    dataset=dataset,
+                ),
+                T.Compose(
                     [
                         T.SampleFrames(num_frames=self.hparams.length, num_clips=5),
-                        T.PadFrames(max_frames=self.hparams.length, axis=2),
+                        T.PadFrames(max_frames=self.hparams.length),
                     ]
                 ),
             )

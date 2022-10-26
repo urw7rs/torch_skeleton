@@ -1,90 +1,49 @@
-import os
 import os.path as osp
 
-import wget
-import zipfile
-
 import json
-
 import numpy as np
 
-from typing import Optional, Callable
+from torch.utils.data import Dataset
 
-from .base_dataset import LazyDataset
+import torch_skeleton.utils as skel_utils
+
+from typing import Callable, Optional
 
 
-class UCLA(LazyDataset):
-    urls = {"all_sqe.zip": "https://www.dropbox.com/s/10pcm4pksjy6mkq/all_sqe.zip?dl=1"}
-
-    checksums = {"all_sqe.zip": "6db59b046f5110fa644774afb2a906d2"}
-
-    @property
-    def download_paths(self):
-        return [osp.join(self.root, "raw", "all_sqe.zip")]
-
+class UCLA(Dataset):
     def __init__(
         self,
-        root: Optional[str] = None,
+        root=".",
         transform: Optional[Callable] = None,
     ):
-        self.root = osp.join(root, "NW-UCLA")
-
         super().__init__()
 
-        if transform is not None:
-            self.transform = transform
-        else:
-            self.transform = lambda x: x
+        self.root = osp.join(root, "NW-UCLA")
+        self.transform = transform
 
-    def download(self, path):
-        if not osp.exists(path):
-            file_name = osp.basename(path)
+        path = osp.join(self.root, "all_sqe.zip")
+        if not skel_utils.downloaded(path):
+            skel_utils.download_url(
+                "https://www.dropbox.com/s/10pcm4pksjy6mkq/all_sqe.zip?dl=1", path
+            )
 
-            url = self.urls[file_name]
-            wget.download(url, out=path)
+            skel_utils.extract_zip(path, osp.join(self.root, "raw"))
 
-            with zipfile.ZipFile(path, "r") as zip_ref:
-                extract_dir = osp.dirname(path)
-                zip_ref.extractall(extract_dir)
+        self.file_paths = skel_utils.listdir(self.root, ext="json")
 
-        paths = []
-        with zipfile.ZipFile(path, "r") as zip_ref:
-            extract_dir = osp.dirname(path)
-
-            for path_obj in zip_ref.filelist:
-                path = osp.join(extract_dir, path_obj.filename)
-                if osp.isfile(path):
-                    paths.append(path)
-
-        return paths
-
-    def open(self, path):
-        data = np.load(path, allow_pickle=True)
-        x = data["x"]
-        y = data["y"]
-
-        return self.transform(x), y
-
-    def process(self, data):
-        data = json.loads(data)
+    def __getitem__(self, index):
+        path = self.file_paths[index]
+        with open(path) as f:
+            data = json.load(f)
 
         x = np.array(data["skeletons"]).astype(float)
+        x = np.expand_dims(x, axis=0)
         y = data["label"]
 
-        return (x, y)
+        if self.transform is not None:
+            x = self.transform(x)
 
-    def save(self, data, path):
-        x, y = data
+        return x, y
 
-        file_name = osp.basename(path)
-        pre, _ = osp.splitext(file_name)
-
-        path = osp.join(self.root, "processed", pre + ".npz")
-
-        dir = osp.dirname(path)
-        if not osp.exists(dir):
-            os.makedirs(dir)
-
-        np.savez(path, x=x, y=y)
-
-        return path
+    def __len__(self):
+        return len(self.file_paths)
