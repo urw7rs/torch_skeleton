@@ -366,52 +366,11 @@ def denoising_by_motion(x):
     return x
 
 
-def denoising_bodies_data(x):
-    x = denoising_by_length(x)
-
-    x = denoising_by_spread(x)
-
-    x = denoising_by_motion(x)
-    return x
-
-
 def intersect_indices(actor1, actor2):
     _, t_indices1 = get_indices(actor1)
     _, t_indices2 = get_indices(actor2)
 
     return np.intersect1d(t_indices1, t_indices2)
-
-
-def get_two_actors_points(x):
-    x = denoising_bodies_data(x)  # Denoising data
-
-    num_bodies = x.shape[0]
-
-    if num_bodies > 1:  # Only left one actor after denoising
-        main_actor = x[0:1]
-        second_actor = np.zeros_like(main_actor)
-
-        actors = np.split(x[1:], indices_or_sections=num_bodies - 1, axis=0)
-
-        for actor in actors:
-            _, t_indices1 = get_indices(main_actor)
-            _, t_indices2 = get_indices(actor)
-
-            intersect = np.intersect1d(t_indices1, t_indices2)
-
-            if len(intersect) == 0:  # no overlap with actor1
-                main_actor[:, t_indices2] = actor[:, t_indices2]
-            else:
-                _, t_indices1 = get_indices(second_actor)
-                _, t_indices2 = get_indices(actor)
-
-                intersect = np.intersect1d(t_indices1, t_indices2)
-                if len(intersect) == 0:
-                    second_actor[:, t_indices2] = actor[:, t_indices2]
-
-        x = np.concatenate([main_actor, second_actor], axis=0)
-
-    return x
 
 
 def merge_bodies(x):
@@ -445,16 +404,3 @@ def merge_bodies(x):
 def remove_zero_frames(x):
     _, t_indices = get_indices(x.sum(axis=0, keepdims=True))
     return x[:, t_indices]
-
-
-def get_raw_denoised_data(x):
-    num_bodies = x.shape[0]
-
-    x = select_k_bodies(x, k=num_bodies)
-
-    if num_bodies > 1:  # only 1 actor
-        x = get_two_actors_points(x)
-
-        x = remove_zero_frames(x)
-
-    return x

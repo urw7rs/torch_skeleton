@@ -1,147 +1,90 @@
-from collections.abc import Callable
-import os
 import os.path as osp
-import multiprocessing as mp
 
-import numpy as np
+import shutil
+import tempfile
 
-from typing import Optional
-
+import torch
 from torch.utils.data import Dataset
 
+import torch_skeleton.utils as skel_utils
 
-class SkeletonDataset(Dataset):
-    @property
-    def root_dir(self):
-        return self.root
+from typing import Callable, Optional
 
-    @property
-    def raw_dir(self):
-        raw_dir = osp.join(self.root_dir, "raw")
-        if not osp.exists(raw_dir):
-            os.makedirs(raw_dir)
-        return raw_dir
 
-    @property
-    def raw_file_names(self):
-        raise NotImplementedError
+class DiskCache(Dataset):
+    """Cache ``Dataset`` instance to disk.
 
-    @property
-    def raw_file_paths(self):
-        return [osp.join(self.raw_dir, file_name) for file_name in self.raw_file_names]
+    Caches output of dataset to disk by creating a temporary directory at root.
 
-    @property
-    def download_paths(self):
-        return ["./"]
-
-    @property
-    def parsed_dir(self):
-        parsed_dir = osp.join(self.root_dir, "parsed")
-        os.makedirs(parsed_dir, exist_ok=True)
-        return parsed_dir
-
-    @property
-    def preprocessed_dir(self):
-        preprocessed_dir = osp.join(self.root_dir, "preprocessed")
-        os.makedirs(preprocessed_dir, exist_ok=True)
-        return preprocessed_dir
+    Args:
+        root (str): root directory of cache
+        dataset (``Dataset``): dataset to cache
+    """
 
     def __init__(
         self,
-        root: Optional[str] = None,
-        preprocess: Optional[Callable] = None,
-        num_workers: Optional[int] = None,
+        dataset: Dataset,
+        root: str = ".",
+        transform: Optional[Callable] = None,
     ):
         super().__init__()
 
-        self.root = "./" if root is None else root
-        self.preprocess = preprocess
+        skel_utils.makedirs(root)
+        self.temp_dir = tempfile.TemporaryDirectory(dir=root)
 
-        for path in self.download_paths:
-            if not osp.exists(path):
-                self.download(path)
+        self.root = self.temp_dir.name
+        self.transform = transform
 
-        if num_workers == 0:
-            use_multiprocessing = False
-        elif num_workers is None:
-            use_multiprocessing = True
-        elif num_workers > 0:
-            use_multiprocessing = True
+        skel_utils.makedirs(self.root)
+        shutil.rmtree(self.root)
+        skel_utils.makedirs(self.root)
+
+        self.dataset = dataset
+
+    def cache_path(self, index):
+        return osp.join(self.root, f"{index}.pt")
+
+    def __getitem__(self, index):
+        path = self.cache_path(index)
+
+        if osp.exists(path):
+            x, y = torch.load(path)
         else:
-            raise NotImplementedError
+            x, y = self.dataset[index]
 
-        if use_multiprocessing:
-            with mp.Pool(num_workers) as p:
-                self.parsed_file_paths = list(
-                    p.imap_unordered(self._parse, self.raw_file_paths)
-                )
+            torch.save([x, y], self.cache_path(index))
 
-                if self.preprocess is None:
-                    self.final_file_paths = self.parsed_file_paths
-                else:
-                    self.final_file_paths = list(
-                        p.imap_unordered(
-                            self._preprocess, self.parsed_file_paths, chunksize=512
-                        )
-                    )
-        else:
-            self.parsed_file_paths = list(map(self._parse, self.raw_file_paths))
-
-            if self.preprocess is None:
-                self.final_file_paths = self.parsed_file_paths
-            else:
-                self.final_file_paths = list(
-                    map(self._preprocess, self.parsed_file_paths)
-                )
-
-        self.final_file_paths = sorted(self.final_file_paths)
-
-    def download(self, path):
-        return path
-
-    def _parse(self, path):
-        file_name = ".".join(osp.basename(path).split(".")[:-1])
-        parsed_path = osp.join(self.parsed_dir, f"{file_name}.npy")
-
-        if osp.exists(parsed_path):
-            return parsed_path
-
-        x = self.parse(path)
-
-        with open(parsed_path, "wb") as f:
-            np.save(f, x)
-
-        return parsed_path
-
-    def parse(self, path):
-        return path
-
-    def _preprocess(self, path):
-        with open(path, "rb") as f:
-            x = np.load(f)
-
-        x = self.preprocess(x)
-
-        file_name = osp.basename(path)
-        preprocessed_path = osp.join(self.preprocessed_dir, file_name)
-
-        with open(preprocessed_path, "wb") as f:
-            np.save(f, x)
-
-        return preprocessed_path
-
-    def get(self, path, x):
-        raise NotImplementedError
-
-    def __getitem__(self, idx):
-        path = self.final_file_paths[idx]
-
-        with open(path, "rb") as f:
-            x = np.load(f)
-
-        x, y = self.get(path, x)
+        if self.transform is not None:
+            x = self.transform(x)
 
         return x, y
 
     def __len__(self):
-        return len(self.final_file_paths)
+        return len(self.dataset)
+
+    def __del__(self):
+        self.temp_dir.cleanup()
+
+
+class Apply(Dataset):
+    """Apply ``Transform`` to ``Dataset`` instance.
+
+    Args:
+        dataset (``Dataset``): dataset to apply transform to
+        transform (``Transform``): transform to apply
+    """
+
+    def __init__(self, dataset: Dataset, transform: Callable):
+        super().__init__()
+
+        self.dataset = dataset
+
+        self.transform = transform
+
+    def __getitem__(self, index):
+        x, y = self.dataset[index]
+        x = self.transform(x)
+        return x, y
+
+    def __len__(self):
+        return len(self.dataset)
