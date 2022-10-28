@@ -12,9 +12,24 @@ from typing import Callable, Optional
 
 
 class DiskCache(Dataset):
-    def __init__(self, root, dataset: Dataset, transform: Optional[Callable] = None):
+    """Cache ``Dataset`` instance to disk.
+
+    Caches output of dataset to disk by creating a temporary directory at root.
+
+    Args:
+        root (str): root directory of cache
+        dataset (``Dataset``): dataset to cache
+    """
+
+    def __init__(
+        self,
+        dataset: Dataset,
+        root: str = ".",
+        transform: Optional[Callable] = None,
+    ):
         super().__init__()
 
+        skel_utils.makedirs(root)
         self.temp_dir = tempfile.TemporaryDirectory(dir=root)
 
         self.root = self.temp_dir.name
@@ -51,17 +66,24 @@ class DiskCache(Dataset):
         self.temp_dir.cleanup()
 
 
-class MapDataset(Dataset):
-    def __init__(self, dataset: Dataset, fn: Callable):
+class Apply(Dataset):
+    """Apply ``Transform`` to ``Dataset`` instance.
+
+    Args:
+        dataset (``Dataset``): dataset to apply transform to
+        transform (``Transform``): transform to apply
+    """
+
+    def __init__(self, dataset: Dataset, transform: Callable):
         super().__init__()
 
         self.dataset = dataset
 
-        self.fn = fn
+        self.transform = transform
 
     def __getitem__(self, index):
         x, y = self.dataset[index]
-        x = self.fn(x)
+        x = self.transform(x)
         return x, y
 
     def __len__(self):

@@ -10,6 +10,16 @@ from typing import Any, Callable, Dict, List, Optional
 
 
 class NTU(Dataset):
+    """`NTU <https://rose1.ntu.edu.sg/dataset/actionRecognition/>`_ Dataset
+
+    Args:
+        root (str): root directory of dataset
+        num_classes (int): number of classes, ``60`` for NTU60, ``120`` for NTU120
+        eval_type (str): evaluation type for train/val split. ``"subject"`` for cross-subject, ``"camera"`` for cross-view.
+        split (str): split type. either ``"train"`` or ``"val"``
+        transform (``Transform``): transform to apply to dataset
+    """
+
     def __init__(
         self,
         root: str = ".",
@@ -68,6 +78,7 @@ class NTU(Dataset):
         self.file_paths = paths
 
     def __getitem__(self, index):
+        """Hi"""
         path = self.file_paths[index]
         with open(path) as f:
             data = loads(f.read())

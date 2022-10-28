@@ -1,12 +1,15 @@
 from typing import Optional
 
+from torch.utils.data import random_split
+
 from pytorch_lightning import LightningDataModule
 
-from torch.utils.data import DataLoader
+from torch_geometric.loader import DataLoader
+import torch_geometric.transforms as T
 
-from torch_skeleton.datasets import NTU, DiskCache, Apply
-
-import torch_skeleton.transforms as T
+from skeleton import transforms
+from skeleton import filters
+from skeleton.datasets import NTUDataset
 
 
 class NTUDataModule(LightningDataModule):
@@ -37,75 +40,67 @@ class NTUDataModule(LightningDataModule):
         self.theta = theta
 
     def setup(self, stage: Optional[str] = None):
-        preprocess = T.Compose(
+        pre_transform = T.Compose(
             [
-                T.Denoise(),
-                T.CenterJoint(joint_id=1, all=False),
-                T.SplitFrames(),
+                transforms.SelectKBodies(k=2),
+                transforms.SubJoint(joint_id=1, all=True),
+                transforms.ParallelBone(first_id=0, second_id=1, axis=2),
+                transforms.ParallelBone(first_id=4, second_id=8, axis=0),
+                transforms.SplitFrames(),
             ]
         )
-
         if stage == "fit" or stage is None:
-            dataset = NTU(
+            self.train_set = NTUDataset(
                 root=self.data_dir,
                 num_classes=self.hparams.num_classes,
                 eval_type=self.hparams.eval_type,
                 split="train",
-                transform=preprocess,
-            )
-
-            self.train_set = Apply(
-                DiskCache(
-                    root=dataset.root,
-                    dataset=dataset,
-                ),
-                T.Compose(
+                pre_filter=filters.filter_empty,
+                pre_transform=pre_transform,
+                transform=T.Compose(
                     [
-                        T.SampleFrames(num_frames=self.hparams.length),
-                        T.RandomRotate(degrees=self.theta),
-                        T.PadFrames(max_frames=self.hparams.length),
+                        transforms.SampleFrames(num_frames=self.hparams.length),
+                        transforms.RandomRotate(degrees=self.theta),
+                        transforms.PadFrames(max_frames=self.hparams.length),
                     ]
                 ),
             )
 
-            dataset = NTU(
+            """
+            val_len = int(len(train_set) * 0.02)
+            train_len = len(train_set) - val_len
+
+            self.train_set, self.val_set = random_split(
+                train_set, lengths=[train_len, val_len]
+            )
+            """
+            self.val_set = NTUDataset(
                 root=self.data_dir,
                 num_classes=self.hparams.num_classes,
                 eval_type=self.hparams.eval_type,
                 split="val",
-                transform=preprocess,
-            )
-
-            self.val_set = Apply(
-                DiskCache(
-                    root=dataset.root,
-                    dataset=dataset,
-                ),
-                T.Compose(
+                pre_filter=filters.filter_empty,
+                pre_transform=pre_transform,
+                transform=T.Compose(
                     [
-                        T.SampleFrames(num_frames=self.hparams.length),
-                        T.PadFrames(max_frames=self.hparams.length),
+                        transforms.SampleFrames(num_frames=self.hparams.length),
+                        transforms.RandomRotate(degrees=self.theta),
+                        transforms.PadFrames(max_frames=self.hparams.length),
                     ]
                 ),
             )
         else:
-            dataset = NTU(
+            self.test_set = NTUDataset(
                 root=self.data_dir,
                 num_classes=self.hparams.num_classes,
                 eval_type=self.hparams.eval_type,
                 split="val",
-                transform=preprocess,
-            )
-
-            self.test_set = Apply(
-                DiskCache(
-                    root=dataset.root,
-                    dataset=dataset,
-                ),
-                T.Compose(
+                pre_filter=filters.filter_empty,
+                pre_transform=pre_transform,
+                transform=T.Compose(
                     [
-                        T.SampleFrames(num_frames=self.hparams.length, num_clips=5),
-                        T.PadFrames(max_frames=self.hparams.length),
+                        transforms.SampleFrames(num_frames=self.hparams.length),
+                        transforms.PadFrames(max_frames=self.hparams.length),
                     ]
                 ),
             )
@@ -114,7 +109,6 @@ class NTUDataModule(LightningDataModule):
         return DataLoader(
             self.train_set,
             batch_size=self.batch_size,
-            shuffle=True,
             num_workers=self.num_workers,
             pin_memory=True,
             drop_last=True,

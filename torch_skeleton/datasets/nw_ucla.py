@@ -11,6 +11,13 @@ from typing import Callable, Optional
 
 
 class UCLA(Dataset):
+    """`NW-UCLA <http://wangjiangb.github.io/my_data.html>`_ Dataset.
+
+    Args:
+        root (str): root directory of dataset
+        transform (``Transform``): transform to apply to dataset
+    """
+
     def __init__(
         self,
         root=".",

@@ -1,20 +1,21 @@
-.. torch_skeleton documentation master file, created by
-   sphinx-quickstart on Thu Oct 27 01:18:51 2022.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+torch_skeleton
+==============
 
-Welcome to torch_skeleton's documentation!
-==========================================
+Efficient datasets and transforms for skeleton data
+
+.. warning::
+   ``torch_skeleton`` is under heavy development.
 
 .. toctree::
+   :caption: Package Reference
    :maxdepth: 2
-   :caption: Contents:
 
+   datasets
+   transforms
+   utils
 
+.. toctree::
+   :caption: Examples
+   :maxdepth: 1
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   dataset_examples.ipynb
