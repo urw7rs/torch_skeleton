@@ -8,6 +8,10 @@ Efficient datasets and transforms for skeleton data
 $ pip install torch_skeleton
 ```
 
+## Documentation
+
+<https://torch-skeleton.readthedocs.io/en/latest/index.html#>
+
 ## Datasets
 
 Download and load raw dataset with preprocess
