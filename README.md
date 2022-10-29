@@ -65,6 +65,14 @@ cache = Apply(
 x, y = cache[0]
 ```
 
+## Training Models using ``torch_skeleton``
+
+Example Training code using ``torch_skeleton`` is available under [examples](/examples/README.md)
+
+Supported models:
+
+* SGN
+
 ## License
 
 `torch_skeleton` was created by Chanhyuk Jung. It is licensed under the terms
