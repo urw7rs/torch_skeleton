@@ -48,8 +48,9 @@ def test_ntu_torch_dataloaders(root, num_classes, eval_type, split, num_workers)
     x, y = next(iter(dataloader))
 
 
-def test_ucla_torch(root):
-    dataset = datasets.UCLA(root=root)
+@pytest.mark.parametrize("split", ["train", "val"])
+def test_ucla_torch(root, split):
+    dataset = datasets.UCLA(root=root, split=split)
 
     x, y = dataset[0]
     print(f"x size: {x.shape} y size: {y} {len(dataset)}")
