@@ -1,5 +1,5 @@
 def pytest_addoption(parser):
-    parser.addoption("--root", action="store", default=".")
+    parser.addoption("--root", action="store", default="data")
     parser.addoption("--num_workers", type=int, default=0)
 
 
