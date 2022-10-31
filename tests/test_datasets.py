@@ -1,15 +1,15 @@
 import pytest
 
 import numpy as np
+import torch
 
 from torch.utils.data import Dataset, DataLoader
 
 from torch_skeleton import datasets
 import torch_skeleton.transforms as T
 
-
 @pytest.mark.parametrize("num_classes", [60, 120])
-@pytest.mark.parametrize("eval_type", ["subject", "camera"])
+@pytest.mark.parametrize("eval_type", ["subject", "camera", "setup"])
 @pytest.mark.parametrize("split", ["train", "val"])
 def test_ntu_torch(root, num_classes, eval_type, split):
     dataset = datasets.NTU(
@@ -24,7 +24,7 @@ def test_ntu_torch(root, num_classes, eval_type, split):
 
 
 @pytest.mark.parametrize("num_classes", [60, 120])
-@pytest.mark.parametrize("eval_type", ["subject", "camera"])
+@pytest.mark.parametrize("eval_type", ["subject", "camera", "setup"])
 @pytest.mark.parametrize("split", ["train", "val"])
 def test_ntu_torch_dataloaders(root, num_classes, eval_type, split, num_workers):
     dataset = datasets.NTU(
@@ -48,8 +48,9 @@ def test_ntu_torch_dataloaders(root, num_classes, eval_type, split, num_workers)
     x, y = next(iter(dataloader))
 
 
-def test_ucla_torch(root):
-    dataset = datasets.UCLA(root=root)
+@pytest.mark.parametrize("split", ["train", "val"])
+def test_ucla_torch(root, split):
+    dataset = datasets.UCLA(root=root, split=split)
 
     x, y = dataset[0]
     print(f"x size: {x.shape} y size: {y} {len(dataset)}")

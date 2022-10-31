@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "torch_skeleton"
-version = "0.1.0"
+version = "0.1.1"
 description = "skeleton datasets and transforms for pytorch"
 authors = [{ name = "Chanhyuk Jung", email = "urw7rs@stu.kmu.ac.kr" }]
 license = { file = "LICENSE" }
 readme = "README.md"
-requires-python = ">= 3.7"
+requires-python = ">= 3.8"
 keywords = [
     "action",
     "recognition",

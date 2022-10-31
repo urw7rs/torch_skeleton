@@ -46,7 +46,7 @@ class NTU(Dataset):
             if not skel_utils.downloaded(path):
                 skel_utils.download_from_gdrive(
                     "https://drive.google.com/uc?id=1tEbuaEqMxAV7dNc4fqu1O4M7mC6CJ50w",
-                    path=None,
+                    path=path,
                 )
                 skel_utils.extract_zip(path, osp.join(self.root, "nturgb+d_skeletons"))
 
@@ -78,7 +78,6 @@ class NTU(Dataset):
         self.file_paths = paths
 
     def __getitem__(self, index):
-        """Hi"""
         path = self.file_paths[index]
         with open(path) as f:
             data = loads(f.read())
@@ -336,6 +335,8 @@ _TRAIN_SUBJECTS = [
 
 _TRAIN_CAMERAS = [2, 3]
 
+_TRAIN_SETUPS = list(range(2, 32 + 1, 2))
+
 
 def get_filename(file_path: str) -> str:
     filename: str = osp.basename(file_path).split(".")[0]
@@ -370,6 +371,10 @@ def ntu_train_cameras():
     return _TRAIN_CAMERAS
 
 
+def ntu_train_setups():
+    return _TRAIN_SETUPS
+
+
 def class_to_label(idx):
     return _LABEL_MAP[idx]
 
@@ -402,7 +407,7 @@ _NTU_EDGE_INDEX = [
 ]
 
 
-def edge_index():
+def ntu_edge_index():
     return _NTU_EDGE_INDEX
 
 
@@ -435,6 +440,10 @@ def filter_split(paths, eval_type, split):
     elif eval_type == "subject":
         get_eval = subject_from_name
         train_evals = ntu_train_subjects()
+
+    elif eval_type == "setup":
+        get_eval = setup_from_name
+        train_evals = ntu_train_setups()
 
     split_paths = []
     for path in paths:
