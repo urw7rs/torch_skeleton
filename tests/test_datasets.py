@@ -1,12 +1,12 @@
 import pytest
 
 import numpy as np
-import torch
 
 from torch.utils.data import Dataset, DataLoader
 
 from torch_skeleton import datasets
 import torch_skeleton.transforms as T
+
 
 @pytest.mark.parametrize("num_classes", [60, 120])
 @pytest.mark.parametrize("eval_type", ["subject", "camera", "setup"])
@@ -73,6 +73,24 @@ def test_ucla_torch_dataloaders(root, num_workers):
     )
 
     x, y = next(iter(dataloader))
+
+
+@pytest.mark.parametrize("num_classes", [60, 120])
+@pytest.mark.parametrize("extra", [False, True])
+@pytest.mark.parametrize("split", ["train", "val", "test"])
+def test_babel(root, num_classes, extra, split):
+    if extra and split == "test":
+        return
+
+    dataset = datasets.BABEL(
+        root=root,
+        num_classes=num_classes,
+        split=split,
+        extra=extra,
+    )
+
+    x, y = dataset[0]
+    print(f"x size: {x.shape} y size: {y} {len(dataset)}")
 
 
 class FakeData(Dataset):

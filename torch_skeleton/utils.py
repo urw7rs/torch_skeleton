@@ -7,6 +7,7 @@ import wget
 import hashlib
 
 import zipfile
+import tarfile
 
 from typing import List, Optional
 
@@ -122,6 +123,17 @@ def extract_zip(src, dst):
     """
     with zipfile.ZipFile(src, "r") as zip_ref:
         zip_ref.extractall(dst)
+
+
+def extract_tar(src, dst):
+    """Extract tar
+
+    Args:
+        src (str): path to tar
+        dst (str): path to extract to
+    """
+    with tarfile.open(src) as tar_ref:
+        tar_ref.extractall(dst)
 
 
 def listzip(path, ext) -> List[str]:
