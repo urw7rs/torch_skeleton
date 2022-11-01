@@ -1,4 +1,4 @@
-__all__ = ["DiskCache", "Apply", "NTU", "UCLA"]
+__all__ = ["DiskCache", "Apply", "NTU", "UCLA", "BABEL"]
 
 from .base_dataset import DiskCache, Apply
 
