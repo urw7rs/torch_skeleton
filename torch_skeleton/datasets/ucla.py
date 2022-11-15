@@ -39,7 +39,7 @@ class UCLA(Dataset):
             skel_utils.extract_zip(path, self.root)
 
         paths = skel_utils.listdir(self.root, ext="json")
-        self.file_paths = filter_split(paths, split)
+        self.file_paths = sorted(filter_split(paths, split))
 
     def __getitem__(self, index):
         path = self.file_paths[index]
