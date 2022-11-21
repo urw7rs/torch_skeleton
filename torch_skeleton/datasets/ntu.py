@@ -75,7 +75,7 @@ class NTU(Dataset):
             missing_files = f.read().splitlines()[3:]
         paths = filter_missing(paths, missing_files)
 
-        self.file_paths = paths
+        self.file_paths = sorted(paths)
 
     def __getitem__(self, index):
         path = self.file_paths[index]
